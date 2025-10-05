@@ -1,0 +1,39 @@
+[
+    {
+        "id": "90154570-1989-4f7f-a643-656f304f4f49",
+        "nombre": "A",
+        "descripcion": "A",
+        "dificultad": 1,
+        "estado": 1,
+        "fecha_creacion_objeto": "2025-10-04 20:29:12",
+        "fecha_inicio_proyecto": "A",
+        "fecha_cierre_proyecto": "1",
+        "duracion_estimada": "1",
+        "resolucion": "1"
+    },
+    {
+        "id": "745547d2-007b-4bcb-8ae9-24e940f57f50",
+        "nombre": "1",
+        "descripcion": "1",
+        "dificultad": 1,
+        "estado": 1,
+        "fecha_creacion_objeto": "2025-10-04 21:57:33",
+        "fecha_inicio_proyecto": "1",
+        "fecha_cierre_proyecto": "1",
+        "duracion_estimada": "1",
+        "resolucion": "1"
+    },
+    {
+        "id": "ec2b8aa0-9b28-4743-9662-c17482b474aa",
+        "nombre": "1",
+        "descripcion": "1",
+        "ubicacion": "1",
+        "cliente": "1",
+        "dificultad": 1,
+        "estado": 1,
+        "fecha_creacion_objeto": "2025-10-04 21:59:25",
+        "fecha_inicio_proyecto": "1",
+        "fecha_cierre_proyecto": "1",
+        "duracion_estimada": "1"
+    }
+]
