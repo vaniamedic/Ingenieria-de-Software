@@ -12,11 +12,12 @@ const DashKanban: React.FC<DashKanbanProps> = ({
   obtenerColorEstado 
 }) => {
   const estados: EstadoProyecto[] = [
-    'Iniciado', 
     'En Desarrollo', 
-    'Enviado', 
+    'Enviado a SEIM',
+    'En Evaluación SEREMITT', 
     'En Corrección', 
-    'Finalizado'
+    'Aprobado',
+    'Rechazado'
   ];
   
   const [draggedProject, setDraggedProject] = useState<string | null>(null);

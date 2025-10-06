@@ -147,9 +147,9 @@ const FormProyecto: React.FC<FormProyectoProps> = ({
                 onChange={(e) => setDatos({...datos, tipo: e.target.value as TipoProyecto})}
                 className={stylesForm.form.select.base}
               >
-                <option value="Básico">Básico (IMIV básico: 45 días)</option>
-                <option value="Intermedio">Intermedio (IMIV intermedio: 60 días)</option>
-                <option value="Mayor">Mayor (IMIV mayor: 90 días)</option>
+                <option value="Básico">Básico</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Mayor">Mayor</option>
               </select>
               
               {/* Info Box de Estimación */}

@@ -4,6 +4,7 @@ import { Filter, AlertTriangle, Plus, Bell, RefreshCw } from 'lucide-react';
 import DashKanban from '../components/DashKanban';
 import FormProyecto from '../components/FormProyecto';
 import DetalleProyecto from '../components/DetalleProyecto';
+import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import styles from '../styles/global';
 import { 
@@ -16,7 +17,11 @@ import {
   Fase 
 } from '../types/types';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavegar: (pagina: 'dashboard' | 'analytics') => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavegar }) => {
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState<boolean>(false);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
@@ -35,38 +40,95 @@ const Dashboard: React.FC = () => {
 
   // Calcular estimación automática
   const calcularEstimacion = (tipo: TipoProyecto, proyectosActivos: number): number => {
-    const estimacionBase: Record<TipoProyecto, number> = {
-      'Básico': 45,
-      'Intermedio': 60,
-      'Mayor': 90
+    //Requerido por fase
+    const fasesBase: Record<TipoProyecto, number> = {
+      'Básico': 8,     
+      'Intermedio': 13,
+      'Mayor': 13
     };
-    const factorCarga = Math.floor(proyectosActivos / 3) * 5;
-    return estimacionBase[tipo] + factorCarga;
+    // ¿Cuántos días por fase? Editar luego
+    const factorComplejidad: Record<TipoProyecto, number> = {
+      'Básico': 3,
+      'Intermedio': 5,
+      'Mayor': 7
+    };
+    // Tiempo base = fases × complejidad
+    const tiempoBase = fasesBase[tipo] * factorComplejidad[tipo];
+    // Por cada proyecto activo adicional, +8% de tiempo
+    const factorCarga = 1 + (proyectosActivos * 0.08);
+    // Estimación final redondeada, supongo
+    return Math.round(tiempoBase * factorCarga);
   };
 
   // Agregar nuevo proyecto
   const agregarProyecto = (nuevoProyecto: NuevoProyectoData): void => {
-    const proyectosActivos = proyectos.filter(p => p.estado !== 'Finalizado').length;
+    const proyectosActivos = proyectos.filter(p => 
+        p.estado !== 'Aprobado' && p.estado !== 'Rechazado'
+    ).length;
     const estimacionDias = calcularEstimacion(nuevoProyecto.tipo, proyectosActivos);
     
+    // Fases según tipo de IMIV (según leyes del gobierno)
+    const fasesPorTipo: Record<TipoProyecto, string[]> = {
+      'Básico': [
+        'Ficha resumen y esquema',
+        'Certificado informaciones previas',
+        'Área de influencia',
+        'Caracterización situación actual',
+        'Medidas de mitigación propuestas',
+        'Situación con proyecto mejorada',
+        'Revisión y ajustes finales',
+        'Preparación para envío SEIM'
+      ],
+      'Intermedio': [
+        'Ficha resumen y esquema',
+        'Certificado informaciones previas',
+        'Definiciones iniciales del IMIV',
+        'Estudios de base situación actual',
+        'Situación base (proyección oferta/demanda)',
+        'Situación con proyecto',
+        'Cuantificación de impactos',
+        'Desarrollo medidas de mitigación',
+        'Situación con proyecto mejorada',
+        'Modelación de transporte',
+        'Conclusiones y anexo digital',
+        'Revisión integral',
+        'Preparación para envío SEIM'
+      ],
+      'Mayor': [
+        'Ficha resumen y esquema',
+        'Certificado informaciones previas',
+        'Definiciones iniciales del IMIV',
+        'Estudios de base situación actual',
+        'Situación base (proyección oferta/demanda)',
+        'Situación con proyecto',
+        'Cuantificación de impactos',
+        'Desarrollo medidas de mitigación',
+        'Situación con proyecto mejorada',
+        'Modelación de transporte completa',
+        'Conclusiones y anexo digital',
+        'Revisión integral',
+        'Preparación para envío SEIM'
+      ]
+    };
+
+
     const proyecto: Proyecto = {
       ...nuevoProyecto,
       codigo: generarCodigoProyecto(),
       fechaRegistro: new Date().toISOString(),
-      estado: 'Iniciado',
+      estado: 'En Desarrollo',
       estimacionDias,
       estimacionAjustada: estimacionDias,
       avance: 0,
-      fases: [
-        { nombre: 'Levantamiento de información', completada: false, fechaInicio: null, fechaFin: null },
-        { nombre: 'Análisis de impacto vial', completada: false, fechaInicio: null, fechaFin: null },
-        { nombre: 'Elaboración de propuestas', completada: false, fechaInicio: null, fechaFin: null },
-        { nombre: 'Redacción informe', completada: false, fechaInicio: null, fechaFin: null },
-        { nombre: 'Revisión interna', completada: false, fechaInicio: null, fechaFin: null },
-        { nombre: 'Subido a SEIM', completada: false, fechaInicio: null, fechaFin: null }
-      ],
+      fases: fasesPorTipo[nuevoProyecto.tipo].map(nombre => ({
+        nombre,
+        completada: false,
+        fechaInicio: null,
+        fechaFin: null
+      })),
       observacionesSEREMITT: null,
-      profesionalAsignado: null
+      profesionalAsignado: null,
+      cicloSEREMITT: null // Para tracking del ciclo de correcciones
     };
     
     const nuevosProyectos = [...proyectos, proyecto];
@@ -99,240 +161,263 @@ const Dashboard: React.FC = () => {
     const nuevasAlertas: Alerta[] = [];
     
     listaProyectos.forEach(proyecto => {
-      if (proyecto.estado === 'Finalizado') return;
+        if (proyecto.estado === 'Aprobado' || proyecto.estado === 'Rechazado') return;
       
-      const diasRestantes = calcularDiasRestantes(proyecto.fechaCompromiso);
-      const avanceEsperado = ((proyecto.estimacionAjustada - diasRestantes) / proyecto.estimacionAjustada) * 100;
-      const desviacion = proyecto.avance - avanceEsperado;
-      
-      if (desviacion <= -15) {
-        nuevasAlertas.push({
-          id: `${proyecto.codigo}-retraso`,
-          tipo: 'critico',
-          proyecto: proyecto.codigo,
-          mensaje: `Proyecto ${proyecto.codigo} con retraso crítico (${Math.abs(desviacion).toFixed(1)}% bajo lo esperado)`,
-          revisada: false
-        });
-      }
-      
-      if (diasRestantes <= 5 && diasRestantes > 0) {
-        nuevasAlertas.push({
-          id: `${proyecto.codigo}-vencimiento`,
-          tipo: 'advertencia',
-          proyecto: proyecto.codigo,
-          mensaje: `Quedan ${diasRestantes} días para la fecha compromiso del proyecto ${proyecto.codigo}`,
-          revisada: false
-        });
-      }
-      
-      if (proyecto.observacionesSEREMITT) {
-        const diasCorreccion = calcularDiasRestantes(proyecto.observacionesSEREMITT.fechaVencimiento);
-        if (diasCorreccion <= 5 && diasCorreccion > 0) {
-          nuevasAlertas.push({
-            id: `${proyecto.codigo}-seremitt`,
-            tipo: 'advertencia',
-            proyecto: proyecto.codigo,
-            mensaje: `Quedan ${diasCorreccion} días para corregir observaciones SEREMITT del proyecto ${proyecto.codigo}`,
-            revisada: false
-          });
+        // Alerta por retraso en desarrollo
+        if (proyecto.estado === 'En Desarrollo') {
+            const diasRestantes = calcularDiasRestantes(proyecto.fechaCompromiso);
+            const avanceEsperado = ((proyecto.estimacionAjustada - diasRestantes) / proyecto.estimacionAjustada) * 100;
+            const desviacion = proyecto.avance - avanceEsperado;
+            
+            if (desviacion <= -15) {
+                nuevasAlertas.push({
+                    id: `${proyecto.codigo}-retraso`,
+                    tipo: 'critico',
+                    proyecto: proyecto.codigo,
+                    mensaje: `${proyecto.codigo}: Retraso crítico de ${Math.abs(desviacion).toFixed(1)}% en desarrollo`,
+                    revisada: false
+                });
+            }
+            
+            if (diasRestantes <= 10 && diasRestantes > 0) {
+                nuevasAlertas.push({
+                    id: `${proyecto.codigo}-vencimiento`,
+                    tipo: 'advertencia',
+                    proyecto: proyecto.codigo,
+                    mensaje: `${proyecto.codigo}: Quedan ${diasRestantes} días para fecha compromiso`,
+                    revisada: false
+                });
+            }
         }
-      }
+             
+        // Alertas específicas por estado SEREMITT
+        if (proyecto.observacionesSEREMITT) {
+            const obs = proyecto.observacionesSEREMITT;
+            const diasRestantes = calcularDiasRestantes(obs.fechaVencimiento);
+            
+            // Alerta crítica si quedan menos de 3 días
+            if (diasRestantes <= 3 && diasRestantes >= 0) {
+                nuevasAlertas.push({
+                    id: `${proyecto.codigo}-seremitt-urgente`,
+                    tipo: 'critico',
+                    proyecto: proyecto.codigo,
+                    mensaje: `${proyecto.codigo}: ¡URGENTE! Quedan ${diasRestantes} días para ${obs.etapaActual}`,
+                    revisada: false
+                });
+            } 
+            // Alerta advertencia si quedan menos de 7 días
+            else if (diasRestantes <= 7 && diasRestantes > 3) {
+                nuevasAlertas.push({
+                    id: `${proyecto.codigo}-seremitt-warning`,
+                    tipo: 'advertencia',
+                    proyecto: proyecto.codigo,
+                    mensaje: `${proyecto.codigo}: Quedan ${diasRestantes} días para ${obs.etapaActual}`,
+                    revisada: false
+                });
+            }
+            
+            // Alerta si se venció el plazo
+            if (diasRestantes < 0) {
+                nuevasAlertas.push({
+                    id: `${proyecto.codigo}-seremitt-vencido`,
+                    tipo: 'critico',
+                    proyecto: proyecto.codigo,
+                    mensaje: `${proyecto.codigo}: Plazo VENCIDO hace ${Math.abs(diasRestantes)} días (${obs.etapaActual})`,
+                    revisada: false
+                });
+            }
+        }
     });
-    
     setAlertas(nuevasAlertas);
-  };
+    };
 
-  // Actualizar estado del proyecto
-  const actualizarEstadoProyecto = (codigoProyecto: string, nuevoEstado: EstadoProyecto): void => {
+// Actualizar estado del proyecto
+const actualizarEstadoProyecto = (codigoProyecto: string, nuevoEstado: EstadoProyecto): void => {
     const nuevosProyectos = proyectos.map(p => {
-      if (p.codigo === codigoProyecto) {
-        const proyectoActualizado = { ...p, estado: nuevoEstado };
-        
-        if (nuevoEstado === 'Enviado') {
-          const plazoRespuesta = p.tipo === 'Básico' ? 20 : 30;
-          const fechaVencimiento = new Date();
-          fechaVencimiento.setDate(fechaVencimiento.getDate() + plazoRespuesta);
-          
-          proyectoActualizado.observacionesSEREMITT = {
-            plazoMaximo: plazoRespuesta,
-            fechaVencimiento: fechaVencimiento.toISOString()
-          };
+        if (p.codigo === codigoProyecto) {
+            const proyectoActualizado = { ...p, estado: nuevoEstado };
+            
+            if (nuevoEstado === 'Enviado a SEIM') {
+                const plazoEvaluacion = p.tipo === 'Básico' ? 45 : 60;
+                const fechaVencimiento = new Date();
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + plazoEvaluacion);
+                
+                proyectoActualizado.observacionesSEREMITT = {
+                    ciclo: 1,
+                    etapaActual: 'Evaluación SEREMITT (Paso 1)',
+                    plazoMaximo: plazoEvaluacion,
+                    fechaVencimiento: fechaVencimiento.toISOString(),
+                    fechaEnvio: new Date().toISOString()
+                };
+            }
+            
+            if (nuevoEstado === 'En Corrección' && p.observacionesSEREMITT) {
+                const plazoCorreccion = p.tipo === 'Básico' ? 20 : 30;
+                const fechaVencimiento = new Date();
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + plazoCorreccion);
+                
+                proyectoActualizado.observacionesSEREMITT = {
+                    ...p.observacionesSEREMITT,
+                    etapaActual: 'Corrección consultora (Paso 2)',
+                    plazoMaximo: plazoCorreccion,
+                    fechaVencimiento: fechaVencimiento.toISOString(),
+                    fechaRecepcionObservaciones: new Date().toISOString()
+                };
+            }
+            
+            if (nuevoEstado === 'En Evaluación SEREMITT' && p.observacionesSEREMITT) {
+                const plazoRevision = p.tipo === 'Básico' ? 20 : 30;
+                const fechaVencimiento = new Date();
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + plazoRevision);
+                
+                proyectoActualizado.observacionesSEREMITT = {
+                    ...p.observacionesSEREMITT,
+                    ciclo: (p.observacionesSEREMITT.ciclo || 1) + 1,
+                    etapaActual: `Revisión SEREMITT ciclo ${(p.observacionesSEREMITT.ciclo || 1) + 1} (Paso 3)`,
+                    plazoMaximo: plazoRevision,
+                    fechaVencimiento: fechaVencimiento.toISOString(),
+                    fechaReenvio: new Date().toISOString()
+                };
+            }
+            
+            return proyectoActualizado;
         }
-        
-        return proyectoActualizado;
-      }
-      return p;
+        return p;
     });
     
     setProyectos(nuevosProyectos);
     verificarAlertas(nuevosProyectos);
-  };
+};
 
-  // Actualizar avance
-  const actualizarAvance = (codigoProyecto: string, fases: Fase[]): void => {
-    const fasesCompletadas = fases.filter(f => f.completada).length;
-    const avance = (fasesCompletadas / fases.length) * 100;
-    
-    const nuevosProyectos = proyectos.map(p => 
-      p.codigo === codigoProyecto ? { ...p, fases, avance } : p
-    );
-    
-    setProyectos(nuevosProyectos);
-    verificarAlertas(nuevosProyectos);
-  };
+    // Actualizar avance
+    const actualizarAvance = (codigoProyecto: string, fases: Fase[]): void => {
+        const fasesCompletadas = fases.filter(f => f.completada).length;
+        const avance = (fasesCompletadas / fases.length) * 100;
+        
+        const nuevosProyectos = proyectos.map(p => 
+        p.codigo === codigoProyecto ? { ...p, fases, avance } : p
+        );
+        
+        setProyectos(nuevosProyectos);
+        verificarAlertas(nuevosProyectos);
+    };
 
-  useEffect(() => {
-    verificarAlertas(proyectos);
-  }, [proyectos]);
+    useEffect(() => {
+        verificarAlertas(proyectos);
+    }, [proyectos]);
 
-  // Filtrar proyectos
-  const proyectosFiltrados = proyectos.filter(p => {
-    if (filtros.tipo !== 'todos' && p.tipo !== filtros.tipo) return false;
-    if (filtros.profesional !== 'todos' && p.profesionalAsignado !== filtros.profesional) return false;
-    return true;
-  });
+    // Filtrar proyectos
+    const proyectosFiltrados = proyectos.filter(p => {
+        if (filtros.tipo !== 'todos' && p.tipo !== filtros.tipo) return false;
+        if (filtros.profesional !== 'todos' && p.profesionalAsignado !== filtros.profesional) return false;
+        return true;
+    });
 
-  return (
-    <div className="min-h-screen bg-gray-50">
+    return (
+        <div className="min-h-screen flex flex-col bg-gray-50">
+            <main className="container mx-auto">
 
-        {/* Header */}
-        <header className={styles.header.container}>
-            <div className={styles.header.wrapper}>
-                <div className={styles.header.flex}>
-                <div>
-                    <h1 className={styles.header.title.h1}>Sistema de Gestión IMIV</h1>
-                    <p className={styles.header.title.subtitle}>
-                    Consultores y Asesorías Viales de la Cuadra Ltda.
-                    </p>
-                </div>
-                
-                <div className={styles.header.actions.container}>
-                    <button
-                    onClick={() => verificarAlertas(proyectos)}
-                    className={styles.header.actions.button}
-                    title="Actualizar dashboard"
-                    >
-                    <RefreshCw size={20} />
-                    </button>
-                    
-                    <div className="relative">
-                    <button className={styles.header.notifications.button}>
-                        <Bell size={20} />
-                        {alertas.filter(a => !a.revisada).length > 0 && (
-                        <span className={styles.header.notifications.badge}>
-                            {alertas.filter(a => !a.revisada).length}
-                        </span>
-                        )}
-                    </button>
-                    </div>
-                    
-                    <button
-                    onClick={() => setMostrarFormulario(true)}
-                    className={styles.header.actions.buttonPrimary}
-                    >
-                    <Plus size={20} />
-                    <span className="hidden sm:inline">Nuevo Proyecto</span>
-                    <span className="sm:hidden">Nuevo</span>
-                    </button>
-                </div>
-                </div>
-            </div>
-        </header>
-        <main className="flex-1">
-            {/* Filtros */}
-            <div className={styles.layout.container + ' py-4 sm:py-6'}>
-                <div className={styles.filters.container}>
-                <div className={styles.filters.wrapper}>
-                    <Filter size={20} className={styles.filters.icon} />
-                    
-                    <select
-                    value={filtros.tipo}
-                    onChange={(e) => setFiltros({...filtros, tipo: e.target.value as TipoProyecto | 'todos'})}
-                    className={styles.filters.select}
-                    >
-                    <option value="todos">Todos los tipos</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Intermedio">Intermedio</option>
-                    <option value="Mayor">Mayor</option>
-                    </select>
-                    
-                    <select
-                    value={filtros.profesional}
-                    onChange={(e) => setFiltros({...filtros, profesional: e.target.value})}
-                    className={styles.filters.select}
-                    >
-                    <option value="todos">Todos los profesionales</option>
-                    <option value="prof1">Profesional 1</option>
-                    <option value="prof2">Profesional 2</option>
-                    <option value="prof3">Profesional 3</option>
-                    <option value="prof4">Profesional 4</option>
-                    <option value="prof5">Profesional 5</option>
-                    </select>
-                    
-                    <div className={styles.filters.counter}>
-                    {proyectosFiltrados.length} proyecto{proyectosFiltrados.length !== 1 ? 's' : ''}
-                    </div>
-                </div>
-                </div>
-            </div>
-
-            {/* Alertas */}
-            {alertas.filter(a => !a.revisada).length > 0 && (
-                <div className={styles.alerts.container}>
-                <div className={`${styles.alerts.wrapper} ${styles.alerts.types.danger}`}>
-                    <div className={styles.alerts.content.flex}>
-                    <AlertTriangle className={`${styles.alerts.content.icon} text-red-500`} size={20} />
-                    <div className={styles.alerts.content.body}>
-                        <h3 className={`${styles.alerts.content.title} text-red-800`}>
-                        Alertas Activas
-                        </h3>
-                        {alertas.filter(a => !a.revisada).slice(0, 3).map(alerta => (
-                        <div key={alerta.id} className={`${styles.alerts.content.item} text-red-700`}>
-                            • {alerta.mensaje}
+                <Header 
+                    paginaActual="dashboard"
+                    onNuevoProyecto={() => setMostrarFormulario(true)}
+                    cantidadAlertas={alertas.filter(a => !a.revisada).length}
+                    onNavegar={onNavegar}
+                />
+                {/* Filtros */}
+                <div className={styles.layout.container + ' py-4 sm:py-6'}>
+                    <div className={styles.filters.container}>
+                        <div className={styles.filters.wrapper}>
+                            <Filter size={20} className={styles.filters.icon} />
+                            <select
+                            value={filtros.tipo}
+                            onChange={(e) => setFiltros({...filtros, tipo: e.target.value as TipoProyecto | 'todos'})}
+                            className={styles.filters.select}
+                            >
+                                <option value="todos">Todos los tipos</option>
+                                <option value="Básico">Básico</option>
+                                <option value="Intermedio">Intermedio</option>
+                                <option value="Mayor">Mayor</option>
+                            </select>
+                            
+                            <select
+                                value={filtros.profesional}
+                                onChange={(e) => setFiltros({...filtros, profesional: e.target.value})}
+                                className={styles.filters.select}
+                            >
+                                <option value="todos">Todos los profesionales</option>
+                                <option value="prof1">Profesional 1</option>
+                                <option value="prof2">Profesional 2</option>
+                                <option value="prof3">Profesional 3</option>
+                                <option value="prof4">Profesional 4</option>
+                                <option value="prof5">Profesional 5</option>
+                            </select>
+                            
+                            <div className={styles.filters.counter}>
+                                {proyectosFiltrados.length} proyecto{proyectosFiltrados.length !== 1 ? 's' : ''}
+                            </div>
                         </div>
-                        ))}
-                    </div>
                     </div>
                 </div>
+
+                {/* Alertas */}
+                {alertas.filter(a => !a.revisada).length > 0 && (
+                    <div className={styles.alerts.container}>
+                        <div className={`${styles.alerts.wrapper} ${styles.alerts.types.danger}`}>
+                            <div className={styles.alerts.content.flex}>
+                                <AlertTriangle className={`${styles.alerts.content.icon} text-red-500`} size={20} />
+                                <div className={styles.alerts.content.body}>
+                                    <h3 className={`${styles.alerts.content.title} text-red-800`}>
+                                        Alertas Activas ({alertas.filter(a => !a.revisada).length})
+                                    </h3>
+                                    {alertas.filter(a => !a.revisada).slice(0, 5).map(alerta => (
+                                    <div key={alerta.id} className={`${styles.alerts.content.item} text-red-700`}>
+                                        • {alerta.mensaje}
+                                    </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Dashboard Kanban */}
+                <div className={styles.dashboard.container}>
+                    <DashKanban 
+                        proyectos={proyectosFiltrados}
+                        onProyectoClick={setProyectoSeleccionado}
+                        onCambiarEstado={actualizarEstadoProyecto}
+                        calcularDiasRestantes={calcularDiasRestantes}
+                        obtenerColorEstado={obtenerColorEstado}
+                    />
                 </div>
-            )}
+            </main>
+                {/* Modal Formulario */}
+                {mostrarFormulario && (
+                    <FormProyecto
+                        onCerrar={() => setMostrarFormulario(false)}
+                        onGuardar={(proyecto) => {
+                            agregarProyecto(proyecto);
+                            setMostrarFormulario(false);
+                        }}
+                        proyectosActivos={proyectos.filter(p => 
+                            p.estado !== 'Aprobado' && p.estado !== 'Rechazado'
+                        ).length}
+                        calcularEstimacion={calcularEstimacion}
+                    />
+                )}
 
-            {/* Dashboard Kanban */}
-            <div className={styles.dashboard.container}>
-                <DashKanban 
-                proyectos={proyectosFiltrados}
-                onProyectoClick={setProyectoSeleccionado}
-                onCambiarEstado={actualizarEstadoProyecto}
-                calcularDiasRestantes={calcularDiasRestantes}
-                obtenerColorEstado={obtenerColorEstado}
-                />
-            </div>
-
-            {/* Modal Formulario */}
-            {mostrarFormulario && (
-                <FormProyecto
-                    onCerrar={() => setMostrarFormulario(false)}
-                    onGuardar={(proyecto) => {
-                        agregarProyecto(proyecto);
-                        setMostrarFormulario(false);
-                    }}
-                    proyectosActivos={proyectos.filter(p => p.estado !== 'Finalizado').length}
-                    calcularEstimacion={calcularEstimacion}
-                />
-            )}
-
-            {/* Modal Detalle Proyecto */}
-            {proyectoSeleccionado && (
-                <DetalleProyecto
-                proyecto={proyectoSeleccionado}
-                onCerrar={() => setProyectoSeleccionado(null)}
-                onActualizarAvance={(fases) => actualizarAvance(proyectoSeleccionado.codigo, fases)}
-                calcularDiasRestantes={calcularDiasRestantes}
-                />
-            )}
-        </main>
-    </div>
-  );
+                {/* Modal Detalle Proyecto */}
+                {proyectoSeleccionado && (
+                    <DetalleProyecto
+                    proyecto={proyectoSeleccionado}
+                    onCerrar={() => setProyectoSeleccionado(null)}
+                    onActualizarAvance={(fases) => actualizarAvance(proyectoSeleccionado.codigo, fases)}
+                    calcularDiasRestantes={calcularDiasRestantes}
+                    />
+                )}
+            <Footer />
+        </div>
+    );
 };
 
 export default Dashboard;
