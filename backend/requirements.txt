@@ -1,3 +1,7 @@
 fastapi
 uvicorn
 pydantic
+sqlalchemy
+psycopg2-binary
+
+# Recuarda usar siempre .\venv\Scripts\activate antes de iniciar
