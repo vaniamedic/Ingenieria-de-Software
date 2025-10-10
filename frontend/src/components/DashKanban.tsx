@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import TarjetaProyecto from './TarjetaProyecto';
 import styles from '../styles/global';
-import { DashKanbanProps, EstadoProyecto } from '../types/types';
+import { DashKanbanProps, EstadoProyecto } from '../../../common/types';
 
 const DashKanban: React.FC<DashKanbanProps> = ({ 
   proyectos, 
@@ -12,14 +12,14 @@ const DashKanban: React.FC<DashKanbanProps> = ({
   obtenerColorEstado 
 }) => {
   const estados: EstadoProyecto[] = [
-    'En Desarrollo', 
-    'Enviado a SEIM',
-    'En Evaluación SEREMITT', 
-    'En Corrección', 
-    'Aprobado',
-    'Rechazado'
-  ];
-  
+    'Iniciado', 
+   'En Desarrollo', 
+   'Enviado a SEIM',
+   'En Corrección', 
+   'En Evaluación SEREMITT',
+   'Aprobado',
+   'Rechazado'];
+
   const [draggedProject, setDraggedProject] = useState<string | null>(null);
 
   return (

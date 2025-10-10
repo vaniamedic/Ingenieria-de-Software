@@ -82,6 +82,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ onNavegar }) => {
         <Header 
           paginaActual="analytics"
           cantidadAlertas={0}
+<<<<<<< HEAD
+=======
+          onNuevoProyecto={() => {}}   // 👈 función vacía
+          onActualizar={() => {}}  
+>>>>>>> c4031176c45b43bdf0a54eaa0a305aacd680b923
           onNavegar={onNavegar}
         />
         {/* Filtros */}
@@ -110,6 +115,19 @@ const Analytics: React.FC<AnalyticsProps> = ({ onNavegar }) => {
             </select>
           </div>
         </div>
+<<<<<<< HEAD
+=======
+        
+        {/* Botón para volver al Dashboard */}
+        <div className="text-center mb-8">
+            <button
+                onClick={() => onNavegar('dashboard')}
+                className="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition"
+            >
+                ← Volver al Dashboard
+            </button>
+        </div>
+>>>>>>> c4031176c45b43bdf0a54eaa0a305aacd680b923
 
         {/* KPIs Principales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">

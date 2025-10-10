@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "fastapi": "^0.0.8",
+    "node": "^24.9.0",
+    "pydantic": "^0.0.1-security",
+    "uvicorn": "^0.0.1-security"
+  }
+}

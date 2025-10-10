@@ -2,6 +2,7 @@ import React from 'react';
 import { LayoutDashboard, BarChart3, Bell, Plus } from 'lucide-react';
 
 interface HeaderProps {
+<<<<<<< HEAD
   paginaActual: 'dashboard' | 'analytics';
   onNuevoProyecto?: () => void;
   cantidadAlertas?: number;
@@ -14,6 +15,16 @@ const Header: React.FC<HeaderProps> = ({
   cantidadAlertas = 0,
   onNavegar 
 }) => {
+=======
+  paginaActual: string;
+  onNuevoProyecto: () => void;
+  onActualizar: () => void;
+  cantidadAlertas: number;
+  onNavegar?: (pagina: 'dashboard' | 'analytics') => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ paginaActual, onNuevoProyecto, onActualizar, cantidadAlertas, onNavegar }) => {
+>>>>>>> c4031176c45b43bdf0a54eaa0a305aacd680b923
   return (
     <header className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 text-white shadow-xl">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
