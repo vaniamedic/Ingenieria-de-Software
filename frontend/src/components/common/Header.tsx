@@ -4,12 +4,14 @@ import { Plus, Bell, RefreshCw } from 'lucide-react';
 import styles from '../../styles/global';
 
 interface HeaderProps {
+  paginaActual: string;
   onNuevoProyecto: () => void;
   onActualizar: () => void;
   cantidadAlertas: number;
+  onNavegar?: (pagina: 'dashboard' | 'analytics') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNuevoProyecto, onActualizar, cantidadAlertas }) => {
+const Header: React.FC<HeaderProps> = ({ paginaActual, onNuevoProyecto, onActualizar, cantidadAlertas, onNavegar }) => {
   return (
     <header className={styles.header.container}>
       <div className={styles.header.wrapper}>

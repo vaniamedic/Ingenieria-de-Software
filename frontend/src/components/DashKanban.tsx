@@ -16,9 +16,9 @@ const DashKanban: React.FC<DashKanbanProps> = ({
     'En Desarrollo', 
     'Enviado', 
     'En Corrección', 
-    'Finalizado'
-  ];
-  
+    'Aprobado',
+    'Rechazado'];
+
   const [draggedProject, setDraggedProject] = useState<string | null>(null);
 
   return (
