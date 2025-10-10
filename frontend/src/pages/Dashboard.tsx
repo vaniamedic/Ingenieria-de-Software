@@ -15,7 +15,7 @@ import {
   TipoProyecto,
   EstadoProyecto,
   Fase 
-} from '../types/types';
+} from '../../../common/types';
 import axios from 'axios';
 
 

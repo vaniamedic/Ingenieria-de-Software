@@ -31,7 +31,7 @@ CREATE TABLE proyectos (
     tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('Básico', 'Intermedio', 'Mayor')),
     cliente VARCHAR(150) NOT NULL,
     ubicacion TEXT NOT NULL,
-    estado estado_proyecto_enum NOT NULL DEFAULT 'Iniciado'
+    estado estado_proyecto_enum NOT NULL DEFAULT 'Iniciado',
     --Iniciado, En Desarrollo, Subido a SEIM, En Corrección, En Evaluación SEREMIT, Aprobado, Rechazado
     
     -- Fechas cruciales
